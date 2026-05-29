@@ -3,6 +3,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const activitySelect = document.getElementById("activity");
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
+  const submitButton = signupForm.querySelector("button[type='submit']");
+  const submitButtonDefaultText = submitButton.textContent;
 
   // Function to fetch activities from API
   async function fetchActivities() {
@@ -12,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Clear loading message
       activitiesList.innerHTML = "";
+      activitySelect.innerHTML = "<option value=\"\">-- Select an activity --</option>";
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -45,8 +48,15 @@ document.addEventListener("DOMContentLoaded", () => {
   signupForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const email = document.getElementById("email").value;
+    if (submitButton.disabled) {
+      return;
+    }
+
+    const email = document.getElementById("email").value.trim().toLowerCase();
     const activity = document.getElementById("activity").value;
+
+    submitButton.disabled = true;
+    submitButton.textContent = "Signing up...";
 
     try {
       const response = await fetch(
@@ -62,6 +72,13 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        await fetchActivities();
+      } else if (response.status === 409) {
+        messageDiv.textContent = "This student is already registered for this activity.";
+        messageDiv.className = "error";
+      } else if (response.status === 400) {
+        messageDiv.textContent = "This activity is full. Please choose another one.";
+        messageDiv.className = "error";
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
@@ -78,6 +95,9 @@ document.addEventListener("DOMContentLoaded", () => {
       messageDiv.className = "error";
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
+    } finally {
+      submitButton.disabled = false;
+      submitButton.textContent = submitButtonDefaultText;
     }
   });
 
